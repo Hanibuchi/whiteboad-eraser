@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using UnityEngine;
+using unityroom.Api; // ← 追加: unityroom APIを使用するための宣言
 
 public sealed class GameManager : MonoBehaviour
 {
@@ -26,6 +27,12 @@ public sealed class GameManager : MonoBehaviour
     [SerializeField] private TutorialUI tutorialUI;
     [SerializeField] private InGameUI inGameUI;
     [SerializeField] private ResultUI resultUI;
+
+    // --- ここから追加: unityroom Ranking Settings ---
+    [Header("unityroom Ranking")]
+    [SerializeField] private int normalBoardNo = 1;       // ノーマルモード用のボードNo
+    [SerializeField] private int impossibleBoardNo = 2;   // インポッシブルモード用のボードNo
+    // --- ここまで追加 ---
 
     // --- ここから追加: PenEraserの生成設定 ---
     [Header("PenEraser Settings")]
@@ -86,7 +93,7 @@ public sealed class GameManager : MonoBehaviour
             "そして、最悪のタイミングで急用の連絡が入った。",
             "『今すぐホワイトボードを使って説明してくれ』",
             "制限時間内にホワイトボードを消そう。",
-            $"クリア条件：{clearPercentageThreshold}%以上白くする" // ← ここで変数を埋め込む
+            $"クリア条件：{clearPercentageThreshold}%以上白くする"
                 };
 
         LoadProgress();
@@ -128,7 +135,6 @@ public sealed class GameManager : MonoBehaviour
 
     public void StartInGameFlow(bool skipFade = false)
     {
-        // 追加: フェードなし遷移かどうかを記憶しておく
         isTransitioningWithoutFade = skipFade;
         TransitionToState(GameState.InGame, skipFade);
     }
@@ -174,7 +180,6 @@ public sealed class GameManager : MonoBehaviour
             return;
         }
 
-        // 変更: チュートリアル完了時のみフェードをスキップする
         StartInGameFlow(true);
     }
 
@@ -295,6 +300,25 @@ public sealed class GameManager : MonoBehaviour
         SaveProgress();
     }
 
+    // --- ここから追加: クリア時間のスコア送信処理 ---
+    private void SendClearTimeScore()
+    {
+        // クリアタイム(秒)を計算
+        float clearTime = TimeLimitSeconds - RemainingTimeSeconds;
+
+        if (CurrentDifficulty == DifficultyMode.Normal)
+        {
+            // ボードNo1にノーマルのクリア時間を送信 (時間が短いほど上位のため HighScoreAsc を指定)
+            UnityroomApiClient.Instance.SendScore(normalBoardNo, clearTime, ScoreboardWriteMode.HighScoreAsc);
+        }
+        else if (CurrentDifficulty == DifficultyMode.Impossible)
+        {
+            // ボードNo2にインポッシブルのクリア時間を送信
+            UnityroomApiClient.Instance.SendScore(impossibleBoardNo, clearTime, ScoreboardWriteMode.HighScoreAsc);
+        }
+    }
+    // --- ここまで追加 ---
+
     public bool IsDifficultyAvailable(DifficultyMode difficultyMode)
     {
         return difficultyMode switch
@@ -362,7 +386,6 @@ public sealed class GameManager : MonoBehaviour
     {
         StateTransitionRequested?.Invoke(CurrentState, nextState);
 
-        // 変更: skipFade が false の時だけフェードを実行する
         if (fadeManager != null && !skipFade)
         {
             yield return fadeManager.FadeTransition(() => EnterState(nextState), null);
@@ -418,7 +441,7 @@ public sealed class GameManager : MonoBehaviour
 
     private void EnterTitleState()
     {
-        CleanupPenEraser(); // 追加: タイトルに戻った時にPenEraserを削除する
+        CleanupPenEraser(); 
 
         PlayBgm(titleBgm);
 
@@ -480,7 +503,6 @@ public sealed class GameManager : MonoBehaviour
             inGameUI.SetWhitePercentage(WhitePercentage);
         }
 
-        // 変更: フェードなしの時はカメラ移動時間分だけ遅延させる
         float delay = isTransitioningWithoutFade ? cameraBlendDuration : 0f;
         gameTimerCoroutine = StartCoroutine(RunGameTimer(delay));
     }
@@ -504,12 +526,11 @@ public sealed class GameManager : MonoBehaviour
 
         resultCountUpCoroutine = StartCoroutine(RunResultCountUp());
     }
+    
     private void SpawnPenEraser()
     {
-        // 既に存在している場合は念のため破棄
         CleanupPenEraser();
 
-        // 難易度に応じてプレハブを選択
         GameObject targetPrefab = CurrentDifficulty switch
         {
             DifficultyMode.Normal => normalPenEraserPrefab,
@@ -524,17 +545,14 @@ public sealed class GameManager : MonoBehaviour
             return;
         }
 
-        // プレハブを生成
         currentPenEraserInstance = Instantiate(targetPrefab, penEraserSpawnPoint.position, penEraserSpawnPoint.rotation);
 
-        // 子孫オブジェクトから"すべて"のPenToolを探してWhiteboardをセットする
         PenTool[] penTools = currentPenEraserInstance.GetComponentsInChildren<PenTool>(true);
         foreach (PenTool pen in penTools)
         {
             pen.SetWhiteboard(whiteboard);
         }
 
-        // 子孫オブジェクトから"すべて"のEraserToolを探してWhiteboardをセットする
         EraserTool[] eraserTools = currentPenEraserInstance.GetComponentsInChildren<EraserTool>(true);
         foreach (EraserTool eraser in eraserTools)
         {
@@ -550,17 +568,14 @@ public sealed class GameManager : MonoBehaviour
             currentPenEraserInstance = null;
         }
     }
-    // --- ここまで追加 ---
 
     private IEnumerator RunGameTimer(float delay)
     {
-        // 追加: 指定された時間待機する（カメラ移動を待つ）
         if (delay > 0f)
         {
             yield return new WaitForSeconds(delay);
         }
 
-        // 追加: カメラ移動完了後にペンを生成し、ゲーム開始のSEを鳴らす
         SpawnPenEraser();
         PlaySe(gameStartSe);
 
@@ -637,6 +652,8 @@ public sealed class GameManager : MonoBehaviour
         if (lastRunCleared)
         {
             MarkClear(CurrentDifficulty);
+            SendClearTimeScore(); // ← 追加: クリア時にスコアを送信
+            
             if (resultUI != null)
             {
                 resultUI.PlayClearParticle();
@@ -743,7 +760,7 @@ public sealed class GameManager : MonoBehaviour
 
     public void RequestTweet()
     {
-        string tweetText = $"ホワイトボード消し: {WhitePercentage:0.0}% まで消しました！";
+        string tweetText = $"ホワイトボードを {WhitePercentage:0.0}% まで消しました！\n#ホワイトボードを消すゲーム\nhttps://unityroom.com/games/whiteboard-eraser";
         string tweetUrl = "https://twitter.com/intent/tweet?text=" + Uri.EscapeDataString(tweetText);
         Application.OpenURL(tweetUrl);
     }
