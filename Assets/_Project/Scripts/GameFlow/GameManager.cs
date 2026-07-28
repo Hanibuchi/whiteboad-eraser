@@ -34,6 +34,7 @@ public sealed class GameManager : MonoBehaviour
     [SerializeField] private GameObject normalPenEraserPrefab;
     [SerializeField] private GameObject hardPenEraserPrefab;
     [SerializeField] private GameObject impossiblePenEraserPrefab;
+    [SerializeField] private GameObject mainCinemachineCamera;
     [SerializeField] private Transform penEraserSpawnPoint;
     
     private GameObject currentPenEraserInstance;
@@ -390,6 +391,8 @@ public sealed class GameManager : MonoBehaviour
 
         PlayBgm(titleBgm);
 
+        mainCinemachineCamera.SetActive(true);
+
         if (titleUI != null)
         {
             titleUI.Show();
@@ -402,6 +405,8 @@ public sealed class GameManager : MonoBehaviour
     {
         PlayBgm(tutorialBgm);
         tutorialStepIndex = 0;
+
+        mainCinemachineCamera.SetActive(false);
 
         if (tutorialUI != null)
         {
@@ -420,6 +425,8 @@ public sealed class GameManager : MonoBehaviour
     {
         PlayBgm(inGameBgm);
         PlaySe(gameStartSe);
+
+        mainCinemachineCamera.SetActive(true);
 
         if (!HasPlayedOnce)
         {
