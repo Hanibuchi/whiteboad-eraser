@@ -7,8 +7,9 @@ public sealed class GameManager : MonoBehaviour
     public const string NormalClearPrefsKey = "GameManager.Clear.Normal";
     public const string HardClearPrefsKey = "GameManager.Clear.Hard";
     public const string SelectedDifficultyPrefsKey = "GameManager.SelectedDifficulty";
+    public const string HasPlayedOncePrefsKey = "GameManager.HasPlayedOnce";
 
-    private const float DefaultTimeLimitSeconds = 180f;
+    [SerializeField] private float defaultTimeLimitSeconds = 180f;
     private const float ClearPercentageThreshold = 99.9f;
     private const float ResultCountUpDurationSeconds = 2f;
 
@@ -41,13 +42,14 @@ public sealed class GameManager : MonoBehaviour
 
     public GameState CurrentState { get; private set; } = GameState.Title;
     public DifficultyMode CurrentDifficulty { get; private set; } = DifficultyMode.Normal;
-    public float TimeLimitSeconds { get; private set; } = DefaultTimeLimitSeconds;
-    public float RemainingTimeSeconds { get; private set; } = DefaultTimeLimitSeconds;
+    public float TimeLimitSeconds { get; private set; }
+    public float RemainingTimeSeconds { get; private set; }
     public float WhitePercentage { get; private set; }
     public bool IsNormalCleared { get; private set; }
     public bool IsHardCleared { get; private set; }
     public bool IsHardUnlocked => IsNormalCleared;
     public bool IsImpossibleUnlocked => IsHardCleared;
+    public bool HasPlayedOnce { get; private set; }
 
     public event Action<GameState> StateChanged;
     public event Action<GameState, GameState> StateTransitionRequested;
@@ -258,6 +260,7 @@ public sealed class GameManager : MonoBehaviour
     {
         IsNormalCleared = PlayerPrefs.GetInt(NormalClearPrefsKey, 0) != 0;
         IsHardCleared = PlayerPrefs.GetInt(HardClearPrefsKey, 0) != 0;
+        HasPlayedOnce = PlayerPrefs.GetInt(HasPlayedOncePrefsKey, 0) != 0; // 追加
 
         int savedDifficulty = PlayerPrefs.GetInt(SelectedDifficultyPrefsKey, (int)DifficultyMode.Normal);
         CurrentDifficulty = NormalizeDifficultySelection((DifficultyMode)savedDifficulty);
@@ -270,13 +273,14 @@ public sealed class GameManager : MonoBehaviour
         PlayerPrefs.SetInt(NormalClearPrefsKey, IsNormalCleared ? 1 : 0);
         PlayerPrefs.SetInt(HardClearPrefsKey, IsHardCleared ? 1 : 0);
         PlayerPrefs.SetInt(SelectedDifficultyPrefsKey, (int)CurrentDifficulty);
+        PlayerPrefs.SetInt(HasPlayedOncePrefsKey, HasPlayedOnce ? 1 : 0); // 追加
         PlayerPrefs.Save();
     }
 
     private void ApplyInitialState()
     {
         CurrentState = GameState.Title;
-        TimeLimitSeconds = DefaultTimeLimitSeconds;
+        TimeLimitSeconds = defaultTimeLimitSeconds;
         RemainingTimeSeconds = TimeLimitSeconds;
         WhitePercentage = whiteboard != null ? whiteboard.GetWhitePercentage() : 0f;
         tutorialStepIndex = 0;
@@ -353,6 +357,7 @@ public sealed class GameManager : MonoBehaviour
         {
             titleUI.Show();
             titleUI.SetInteractable(true);
+            titleUI.UpdateDifficultyButtons(HasPlayedOnce, IsHardUnlocked, IsImpossibleUnlocked);
         }
     }
 
@@ -378,6 +383,12 @@ public sealed class GameManager : MonoBehaviour
     {
         PlayBgm(inGameBgm);
         PlaySe(gameStartSe);
+
+        if (!HasPlayedOnce)
+        {
+            HasPlayedOnce = true;
+            SaveProgress();
+        }
 
         RemainingTimeSeconds = TimeLimitSeconds;
         lastCountdownSecondPlayed = int.MaxValue;
@@ -413,7 +424,6 @@ public sealed class GameManager : MonoBehaviour
 
         resultCountUpCoroutine = StartCoroutine(RunResultCountUp());
     }
-
     private IEnumerator RunGameTimer()
     {
         while (CurrentState == GameState.InGame && RemainingTimeSeconds > 0f)
@@ -431,6 +441,13 @@ public sealed class GameManager : MonoBehaviour
             {
                 lastCountdownSecondPlayed = currentCountdownSecond;
                 PlaySe(countdownSe);
+
+                // --- ここを追加: 毎秒切り替わるタイミングでUIのアニメーションを再生 ---
+                if (inGameUI != null)
+                {
+                    inGameUI.PlayCountdownAnimation();
+                }
+                // -----------------------------------------------------------
             }
 
             yield return null;
@@ -511,6 +528,7 @@ public sealed class GameManager : MonoBehaviour
         HideAllUi();
         titleUI?.Show();
         titleUI?.SetInteractable(true);
+        titleUI.UpdateDifficultyButtons(HasPlayedOnce, IsHardUnlocked, IsImpossibleUnlocked);
     }
 
     private void UpdateTutorialLine()
@@ -579,12 +597,18 @@ public sealed class GameManager : MonoBehaviour
         string tweetUrl = "https://twitter.com/intent/tweet?text=" + Uri.EscapeDataString(tweetText);
         Application.OpenURL(tweetUrl);
     }
+    private void RequestStartNormal() => RequestStartDifficulty(DifficultyMode.Normal);
+    private void RequestStartHard() => RequestStartDifficulty(DifficultyMode.Hard);
+    private void RequestStartImpossible() => RequestStartDifficulty(DifficultyMode.Impossible);
 
     private void SubscribeUiEvents()
     {
         if (titleUI != null)
         {
             titleUI.StartRequested += RequestStartGame;
+            titleUI.NormalRequested += RequestStartNormal;         // 追加
+            titleUI.HardRequested += RequestStartHard;             // 追加
+            titleUI.ImpossibleRequested += RequestStartImpossible; // 追加
         }
 
         if (tutorialUI != null)
@@ -607,6 +631,9 @@ public sealed class GameManager : MonoBehaviour
         if (titleUI != null)
         {
             titleUI.StartRequested -= RequestStartGame;
+            titleUI.NormalRequested -= RequestStartNormal;         // 追加
+            titleUI.HardRequested -= RequestStartHard;             // 追加
+            titleUI.ImpossibleRequested -= RequestStartImpossible; // 追加
         }
 
         if (tutorialUI != null)

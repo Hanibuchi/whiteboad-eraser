@@ -13,6 +13,10 @@ public sealed class MyButton : Button
     public override void OnPointerEnter(PointerEventData eventData)
     {
         base.OnPointerEnter(eventData);
+        if (!IsInteractable())
+        {
+            return;
+        }
         PlaySe(hoverSeClip);
     }
 
@@ -23,6 +27,10 @@ public sealed class MyButton : Button
         if (suppressNextSelectSe)
         {
             suppressNextSelectSe = false;
+            return;
+        }
+        if (!IsInteractable())
+        {
             return;
         }
 
@@ -43,15 +51,28 @@ public sealed class MyButton : Button
     {
         base.OnPointerClick(eventData);
 
+        if (!IsInteractable())
+        {
+            return;
+        }
+
         if (eventData.button == PointerEventData.InputButton.Left)
         {
             PlaySe(clickSeClip);
+            if (EventSystem.current != null)
+            {
+                EventSystem.current.SetSelectedGameObject(null);
+            }
         }
     }
 
     public override void OnSubmit(BaseEventData eventData)
     {
         base.OnSubmit(eventData);
+        if (!IsInteractable())
+        {
+            return;
+        }
         PlaySe(clickSeClip);
     }
 

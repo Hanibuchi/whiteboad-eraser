@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using System.Collections; // コルーチン用に必要
 
 public sealed class InGameUI : MonoBehaviour
 {
@@ -8,6 +9,8 @@ public sealed class InGameUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI remainingTimeText;
     [SerializeField] private TextMeshProUGUI whitePercentageText;
     [SerializeField] private GameObject countdownWarningRoot;
+
+    private Coroutine countdownCoroutine; // アニメーション用のコルーチン参照
 
     public void Show()
     {
@@ -26,10 +29,9 @@ public sealed class InGameUI : MonoBehaviour
             return;
         }
 
+        // 制限時間を秒数のみの表示に変更
         int totalSeconds = Mathf.Max(0, Mathf.CeilToInt(remainingSeconds));
-        int minutes = totalSeconds / 60;
-        int seconds = totalSeconds % 60;
-        remainingTimeText.text = $"{minutes:00}:{seconds:00}";
+        remainingTimeText.text = totalSeconds.ToString();
     }
 
     public void SetWhitePercentage(float whitePercentage)
@@ -46,6 +48,36 @@ public sealed class InGameUI : MonoBehaviour
         {
             countdownWarningRoot.SetActive(visible);
         }
+    }
+
+    // 毎秒数字を大きく表示するアニメーションの呼び出し
+    public void PlayCountdownAnimation()
+    {
+        if (remainingTimeText == null) return;
+
+        if (countdownCoroutine != null)
+        {
+            StopCoroutine(countdownCoroutine);
+        }
+        countdownCoroutine = StartCoroutine(CountdownAnimationRoutine());
+    }
+
+    private IEnumerator CountdownAnimationRoutine()
+    {
+        float duration = 0.3f;
+        float elapsed = 0f;
+        Vector3 startScale = Vector3.one * 1.5f; // 1.5倍のサイズからスタート
+        Vector3 endScale = Vector3.one;          // 元のサイズ
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            float t = elapsed / duration;
+            remainingTimeText.transform.localScale = Vector3.Lerp(startScale, endScale, t);
+            yield return null;
+        }
+        
+        remainingTimeText.transform.localScale = endScale;
     }
 
     private void SetRootActive(bool visible)
