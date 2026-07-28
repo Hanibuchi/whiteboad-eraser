@@ -7,6 +7,11 @@ public sealed class EraserTool : MonoBehaviour
     [SerializeField, Min(0.0001f)] private float minimumEraseSize = 0.01f;
     [SerializeField] private bool autoFindWhiteboard = true;
 
+    public void SetWhiteboard(Whiteboard targetWhiteboard)
+    {
+        whiteboard = targetWhiteboard;
+    }
+
     private void Awake()
     {
         if (bottomCollider == null)
@@ -19,48 +24,46 @@ public sealed class EraserTool : MonoBehaviour
             whiteboard = FindFirstObjectByType<Whiteboard>();
         }
     }
-
-    private void OnCollisionEnter(Collision collision)
-    {
-        ProcessCollision(collision);
-    }
-
-    private void OnCollisionStay(Collision collision)
-    {
-        ProcessCollision(collision);
-    }
-private void ProcessCollision(Collision collision)
+    
+    public void ProcessCollision(Collision collision)
     {
         if (whiteboard == null || !whiteboard.IsInitialized || whiteboard.BoardCollider == null)
-        {
             return;
-        }
 
         if (collision.collider != whiteboard.BoardCollider)
-        {
             return;
-        }
-        
+
+        if (collision.contactCount == 0)
+            return;
+
         Collider sourceCollider = bottomCollider != null ? bottomCollider : GetComponent<Collider>();
+
+        // --- ここから追加: 消しゴム自身のコライダーが実際に触れているか確認 ---
+        bool isTouching = false;
+        for (int i = 0; i < collision.contactCount; i++)
+        {
+            if (collision.GetContact(i).thisCollider == sourceCollider)
+            {
+                isTouching = true;
+                break;
+            }
+        }
+
+        if (!isTouching) return; // 消しゴムが触れていなければ処理しない
+        // --- ここまで追加 ---
+
         Vector3 centerPoint = sourceCollider != null ? sourceCollider.bounds.center : transform.position;
 
         if (!whiteboard.TryGetUv(centerPoint, out Vector2 uv))
-        {
             return;
-        }
 
         Vector2 eraseSizeUv = ResolveEraseSizeUv();
-        
-        // --- ここから変更 ---
-        // 消しゴムの長辺方向（ローカルのX軸 = right）を、ホワイトボードのローカル座標系に変換
         Vector3 localDir = whiteboard.transform.InverseTransformDirection(transform.right);
-        
-        // ホワイトボードのXY平面上での角度を計算（ラジアンから度数法へ変換）
         float angleDeg = Mathf.Atan2(localDir.y, localDir.x) * Mathf.Rad2Deg;
-        // --- ここまで変更 ---
 
         whiteboard.DrawRectangle(uv, eraseSizeUv, angleDeg);
     }
+    
     private Vector2 ResolveEraseSizeUv()
     {
         Collider sourceCollider = bottomCollider != null ? bottomCollider : GetComponent<Collider>();
@@ -77,9 +80,9 @@ private void ProcessCollision(Collision collision)
             float realHeight = boxCollider.size.z * sourceCollider.transform.lossyScale.z;
 
             // 2. その長さを「ホワイトボードのX軸・Y軸に沿ったベクトル」として組み立てる
-            Vector3 alignedWorldSize = whiteboard.transform.right * realWidth 
+            Vector3 alignedWorldSize = whiteboard.transform.right * realWidth
                                      + whiteboard.transform.up * realHeight;
-            
+
             // 3. 既存の変換メソッドを通すことで、スケールや回転の影響を受けない正確なUVサイズを取得
             uvSize = whiteboard.WorldSizeToUvSize(alignedWorldSize);
         }

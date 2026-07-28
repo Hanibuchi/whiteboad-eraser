@@ -29,6 +29,16 @@ public sealed class GameManager : MonoBehaviour
     [SerializeField] private InGameUI inGameUI;
     [SerializeField] private ResultUI resultUI;
 
+    // --- ここから追加: PenEraserの生成設定 ---
+    [Header("PenEraser Settings")]
+    [SerializeField] private GameObject normalPenEraserPrefab;
+    [SerializeField] private GameObject hardPenEraserPrefab;
+    [SerializeField] private GameObject impossiblePenEraserPrefab;
+    [SerializeField] private Transform penEraserSpawnPoint;
+    
+    private GameObject currentPenEraserInstance;
+    // --- ここまで追加 ---
+
     [Header("Audio")]
     [SerializeField] private AudioClip titleBgm;
     [SerializeField] private AudioClip tutorialBgm;
@@ -213,7 +223,6 @@ public sealed class GameManager : MonoBehaviour
 
         SetWhitePercentage(whiteboard.GetWhitePercentage());
 
-        // 追加: 99%を超えたらその時点でクリアとしてリザルトへ遷移する
         if (CurrentState == GameState.InGame && WhitePercentage >= clearPercentageThreshold)
         {
             NotifyGameClear();
@@ -227,15 +236,11 @@ public sealed class GameManager : MonoBehaviour
             return;
         }
 
-        // タイマーを止める
         if (gameTimerCoroutine != null)
         {
             StopCoroutine(gameTimerCoroutine);
             gameTimerCoroutine = null;
         }
-
-        // タイムアップSEの代わりに、クリア用のSEを鳴らす場合はここに処理を追加できます
-        // PlaySe(gameClearSe);
 
         StartResultFlow();
     }
@@ -290,7 +295,7 @@ public sealed class GameManager : MonoBehaviour
     {
         IsNormalCleared = PlayerPrefs.GetInt(NormalClearPrefsKey, 0) != 0;
         IsHardCleared = PlayerPrefs.GetInt(HardClearPrefsKey, 0) != 0;
-        HasPlayedOnce = PlayerPrefs.GetInt(HasPlayedOncePrefsKey, 0) != 0; // 追加
+        HasPlayedOnce = PlayerPrefs.GetInt(HasPlayedOncePrefsKey, 0) != 0;
 
         int savedDifficulty = PlayerPrefs.GetInt(SelectedDifficultyPrefsKey, (int)DifficultyMode.Normal);
         CurrentDifficulty = NormalizeDifficultySelection((DifficultyMode)savedDifficulty);
@@ -303,7 +308,7 @@ public sealed class GameManager : MonoBehaviour
         PlayerPrefs.SetInt(NormalClearPrefsKey, IsNormalCleared ? 1 : 0);
         PlayerPrefs.SetInt(HardClearPrefsKey, IsHardCleared ? 1 : 0);
         PlayerPrefs.SetInt(SelectedDifficultyPrefsKey, (int)CurrentDifficulty);
-        PlayerPrefs.SetInt(HasPlayedOncePrefsKey, HasPlayedOnce ? 1 : 0); // 追加
+        PlayerPrefs.SetInt(HasPlayedOncePrefsKey, HasPlayedOnce ? 1 : 0);
         PlayerPrefs.Save();
     }
 
@@ -381,6 +386,8 @@ public sealed class GameManager : MonoBehaviour
 
     private void EnterTitleState()
     {
+        CleanupPenEraser(); // 追加: タイトルに戻った時にPenEraserを削除する
+
         PlayBgm(titleBgm);
 
         if (titleUI != null)
@@ -420,6 +427,9 @@ public sealed class GameManager : MonoBehaviour
             SaveProgress();
         }
 
+        // --- 追加: ここで難易度に応じたPenEraserを生成 ---
+        SpawnPenEraser();
+
         RemainingTimeSeconds = TimeLimitSeconds;
         lastCountdownSecondPlayed = int.MaxValue;
         SetWhitePercentage(whiteboard != null ? whiteboard.GetWhitePercentage() : 0f);
@@ -454,6 +464,54 @@ public sealed class GameManager : MonoBehaviour
 
         resultCountUpCoroutine = StartCoroutine(RunResultCountUp());
     }
+private void SpawnPenEraser()
+    {
+        // 既に存在している場合は念のため破棄
+        CleanupPenEraser();
+
+        // 難易度に応じてプレハブを選択
+        GameObject targetPrefab = CurrentDifficulty switch
+        {
+            DifficultyMode.Normal => normalPenEraserPrefab,
+            DifficultyMode.Hard => hardPenEraserPrefab,
+            DifficultyMode.Impossible => impossiblePenEraserPrefab,
+            _ => normalPenEraserPrefab
+        };
+
+        if (targetPrefab == null || penEraserSpawnPoint == null)
+        {
+            Debug.LogWarning("PenEraserのプレハブ、またはSpawnPointが設定されていません。");
+            return;
+        }
+
+        // プレハブを生成
+        currentPenEraserInstance = Instantiate(targetPrefab, penEraserSpawnPoint.position, penEraserSpawnPoint.rotation);
+
+        // 子孫オブジェクトから"すべて"のPenToolを探してWhiteboardをセットする
+        PenTool[] penTools = currentPenEraserInstance.GetComponentsInChildren<PenTool>(true);
+        foreach (PenTool pen in penTools)
+        {
+            pen.SetWhiteboard(whiteboard);
+        }
+
+        // 子孫オブジェクトから"すべて"のEraserToolを探してWhiteboardをセットする
+        EraserTool[] eraserTools = currentPenEraserInstance.GetComponentsInChildren<EraserTool>(true);
+        foreach (EraserTool eraser in eraserTools)
+        {
+            eraser.SetWhiteboard(whiteboard);
+        }
+    }
+
+    private void CleanupPenEraser()
+    {
+        if (currentPenEraserInstance != null)
+        {
+            Destroy(currentPenEraserInstance);
+            currentPenEraserInstance = null;
+        }
+    }
+    // --- ここまで追加 ---
+
     private IEnumerator RunGameTimer()
     {
         while (CurrentState == GameState.InGame && RemainingTimeSeconds > 0f)
@@ -472,12 +530,10 @@ public sealed class GameManager : MonoBehaviour
                 lastCountdownSecondPlayed = currentCountdownSecond;
                 PlaySe(countdownSe);
 
-                // --- ここを追加: 毎秒切り替わるタイミングでUIのアニメーションを再生 ---
                 if (inGameUI != null)
                 {
                     inGameUI.PlayCountdownAnimation();
                 }
-                // -----------------------------------------------------------
             }
 
             yield return null;
@@ -486,20 +542,19 @@ public sealed class GameManager : MonoBehaviour
         gameTimerCoroutine = null;
         NotifyTimeExpired();
     }
+
     private IEnumerator RunResultCountUp()
     {
         float elapsedSeconds = 0f;
         int lastDisplayedValue = -1;
-
-        // --- SEを間引くための変数 ---
-        float seInterval = 0.05f; // 0.05秒（50ミリ秒）に1回だけ鳴らす
-        float timeSinceLastSe = seInterval; // 最初はすぐに鳴るように初期値を設定
+        float seInterval = 0.05f; 
+        float timeSinceLastSe = seInterval; 
 
         while (elapsedSeconds < ResultCountUpDurationSeconds)
         {
             float deltaTime = Time.unscaledDeltaTime;
             elapsedSeconds += deltaTime;
-            timeSinceLastSe += deltaTime; // 経過時間を加算
+            timeSinceLastSe += deltaTime; 
 
             float normalizedTime = Mathf.Clamp01(elapsedSeconds / ResultCountUpDurationSeconds);
             float currentPercentage = Mathf.Lerp(0f, resultTargetPercentage, normalizedTime);
@@ -514,11 +569,10 @@ public sealed class GameManager : MonoBehaviour
             {
                 lastDisplayedValue = currentDisplayedValue;
 
-                // 前回SEを鳴らしてから指定した時間(seInterval)以上経過しているかチェック
                 if (timeSinceLastSe >= seInterval)
                 {
                     PlaySe(resultCountSe);
-                    timeSinceLastSe = 0f; // タイマーをリセット
+                    timeSinceLastSe = 0f; 
                 }
             }
 
@@ -652,9 +706,9 @@ public sealed class GameManager : MonoBehaviour
         if (titleUI != null)
         {
             titleUI.StartRequested += RequestStartGame;
-            titleUI.NormalRequested += RequestStartNormal;         // 追加
-            titleUI.HardRequested += RequestStartHard;             // 追加
-            titleUI.ImpossibleRequested += RequestStartImpossible; // 追加
+            titleUI.NormalRequested += RequestStartNormal;         
+            titleUI.HardRequested += RequestStartHard;             
+            titleUI.ImpossibleRequested += RequestStartImpossible; 
         }
 
         if (tutorialUI != null)
@@ -677,9 +731,9 @@ public sealed class GameManager : MonoBehaviour
         if (titleUI != null)
         {
             titleUI.StartRequested -= RequestStartGame;
-            titleUI.NormalRequested -= RequestStartNormal;         // 追加
-            titleUI.HardRequested -= RequestStartHard;             // 追加
-            titleUI.ImpossibleRequested -= RequestStartImpossible; // 追加
+            titleUI.NormalRequested -= RequestStartNormal;         
+            titleUI.HardRequested -= RequestStartHard;             
+            titleUI.ImpossibleRequested -= RequestStartImpossible; 
         }
 
         if (tutorialUI != null)

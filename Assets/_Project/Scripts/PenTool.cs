@@ -17,6 +17,11 @@ public sealed class PenTool : MonoBehaviour
     public float InkLevel => inkLevel;
     public float InkPercentage => inkLevel * 100f;
 
+    public void SetWhiteboard(Whiteboard targetWhiteboard)
+    {
+        whiteboard = targetWhiteboard;
+    }
+
     private void Awake()
     {
         if (tipCollider == null)
@@ -30,17 +35,7 @@ public sealed class PenTool : MonoBehaviour
         }
     }
 
-    private void OnCollisionEnter(Collision collision)
-    {
-        ProcessCollision(collision);
-    }
-
-    private void OnCollisionStay(Collision collision)
-    {
-        ProcessCollision(collision);
-    }
-
-    private void OnCollisionExit(Collision collision)
+    public void HandleCollisionExit(Collision collision)
     {
         if (whiteboard != null && collision.collider == whiteboard.BoardCollider)
         {
@@ -54,22 +49,47 @@ public sealed class PenTool : MonoBehaviour
         hasLastUv = false;
     }
 
-    private void ProcessCollision(Collision collision)
+    public void ProcessCollision(Collision collision)
     {
         if (whiteboard == null || !whiteboard.IsInitialized || whiteboard.BoardCollider == null)
         {
             return;
         }
+        // Debug.Log($"initialized. {transform.parent.name}");
 
         if (collision.collider != whiteboard.BoardCollider)
         {
             return;
         }
+        // Debug.Log($"collide with whiteboard. {transform.parent.name}");
 
         if (collision.contactCount == 0)
         {
             return;
         }
+        // Debug.Log($"contact count is not zero. {transform.parent.name}");
+
+        Collider sourceCollider = tipCollider != null ? tipCollider : GetComponent<Collider>();
+
+        ContactPoint validContact = default;
+        bool isTouching = false;
+
+        for (int i = 0; i < collision.contactCount; i++)
+        {
+            ContactPoint contact = collision.GetContact(i);
+            if (contact.thisCollider == sourceCollider)
+            {
+                validContact = contact;
+                isTouching = true;
+                break;
+            }
+        }
+
+        if (!isTouching)
+        {
+            return;
+        }
+            // Debug.Log($"contact point found. {transform.parent.name}");
 
         if (inkLevel <= 0f)
         {
@@ -77,11 +97,13 @@ public sealed class PenTool : MonoBehaviour
             return;
         }
 
-        ContactPoint contactPoint = collision.GetContact(0);
-        if (!whiteboard.TryGetUv(contactPoint.point, out Vector2 uv))
+        // 先頭の接触点ではなく、ペン自身の接触点(validContact)を使用
+        if (!whiteboard.TryGetUv(validContact.point, out Vector2 uv))
         {
             return;
         }
+            // Debug.Log($"UV found. {transform.parent.name}");
+        // --- ここまで ---
 
         Vector2 brushSizeUv = ResolveBrushSizeUv();
         float brushRadiusUv = Mathf.Max(minimumBrushRadius, Mathf.Min(brushSizeUv.x, brushSizeUv.y) * 0.5f);
