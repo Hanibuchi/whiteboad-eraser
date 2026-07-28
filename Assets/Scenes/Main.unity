@@ -212,6 +212,8 @@ MonoBehaviour:
   advanceButton: {fileID: 711806883}
   dialogueText: {fileID: 2144557730}
   stepCounterText: {fileID: 0}
+  typingSpeed: 0.05
+  typingSe: {fileID: 8300000, guid: 9290f3d17d0404979925770a94838153, type: 3}
 --- !u!114 &12613809
 MonoBehaviour:
   m_ObjectHideFlags: 0

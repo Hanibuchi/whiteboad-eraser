@@ -13,12 +13,17 @@ public sealed class GameManager : MonoBehaviour
     [SerializeField] private float clearPercentageThreshold = 99.0f;
     private const float ResultCountUpDurationSeconds = 2f;
 
+
+    [SerializeField] private float cameraBlendDuration = 2f;
+    private bool isTransitioningWithoutFade = false;
+
     private static readonly string[] TutorialLines =
     {
-        "ある日、ホワイトボード消しにペンをつけるとどうなるか興味がわいた。",
+        "ホワイトボード消しにペンを固定すれば、消去と執筆を同時に行う不可逆のシステムが完成するのではないか？",
         "瞬間接着剤でくっつけたら取れなくなった。",
         "連絡が来てすぐホワイトボードを使う必要が出た。",
-        "制限時間内に落書きを全部消す。",
+        "制限時間内にホワイトボードを消そう。",
+        "クリア条件：99%以上白くする",
     };
 
     [Header("Core References")]
@@ -36,7 +41,7 @@ public sealed class GameManager : MonoBehaviour
     [SerializeField] private GameObject impossiblePenEraserPrefab;
     [SerializeField] private GameObject mainCinemachineCamera;
     [SerializeField] private Transform penEraserSpawnPoint;
-    
+
     private GameObject currentPenEraserInstance;
     // --- ここまで追加 ---
 
@@ -116,9 +121,11 @@ public sealed class GameManager : MonoBehaviour
         TransitionToState(GameState.Tutorial);
     }
 
-    public void StartInGameFlow()
+    public void StartInGameFlow(bool skipFade = false)
     {
-        TransitionToState(GameState.InGame);
+        // 追加: フェードなし遷移かどうかを記憶しておく
+        isTransitioningWithoutFade = skipFade;
+        TransitionToState(GameState.InGame, skipFade);
     }
 
     public void StartResultFlow()
@@ -128,6 +135,7 @@ public sealed class GameManager : MonoBehaviour
 
     public void RequestStartGame()
     {
+        SelectDifficulty(DifficultyMode.Normal);
         StartTutorialFlow();
     }
 
@@ -161,7 +169,8 @@ public sealed class GameManager : MonoBehaviour
             return;
         }
 
-        StartInGameFlow();
+        // 変更: チュートリアル完了時のみフェードをスキップする
+        StartInGameFlow(true);
     }
 
     public void RequestRetry()
@@ -334,14 +343,31 @@ public sealed class GameManager : MonoBehaviour
         RefreshResultUnlockButtons(false);
     }
 
-    private void TransitionToState(GameState nextState)
+    private void TransitionToState(GameState nextState, bool skipFade = false)
     {
         if (stateTransitionCoroutine != null)
         {
             StopCoroutine(stateTransitionCoroutine);
         }
 
-        stateTransitionCoroutine = StartCoroutine(TransitionRoutine(nextState));
+        stateTransitionCoroutine = StartCoroutine(TransitionRoutine(nextState, skipFade));
+    }
+
+    private IEnumerator TransitionRoutine(GameState nextState, bool skipFade)
+    {
+        StateTransitionRequested?.Invoke(CurrentState, nextState);
+
+        // 変更: skipFade が false の時だけフェードを実行する
+        if (fadeManager != null && !skipFade)
+        {
+            yield return fadeManager.FadeTransition(() => EnterState(nextState), null);
+        }
+        else
+        {
+            EnterState(nextState);
+        }
+
+        stateTransitionCoroutine = null;
     }
 
     private IEnumerator TransitionRoutine(GameState nextState)
@@ -420,11 +446,10 @@ public sealed class GameManager : MonoBehaviour
             }
         }
     }
-
     private void EnterInGameState()
     {
         PlayBgm(inGameBgm);
-        PlaySe(gameStartSe);
+        // PlaySe(gameStartSe); // ← 削除します
 
         mainCinemachineCamera.SetActive(true);
 
@@ -434,8 +459,7 @@ public sealed class GameManager : MonoBehaviour
             SaveProgress();
         }
 
-        // --- 追加: ここで難易度に応じたPenEraserを生成 ---
-        SpawnPenEraser();
+        // SpawnPenEraser(); // ← 削除します（待機後に生成するため）
 
         RemainingTimeSeconds = TimeLimitSeconds;
         lastCountdownSecondPlayed = int.MaxValue;
@@ -449,7 +473,9 @@ public sealed class GameManager : MonoBehaviour
             inGameUI.SetWhitePercentage(WhitePercentage);
         }
 
-        gameTimerCoroutine = StartCoroutine(RunGameTimer());
+        // 変更: フェードなしの時はカメラ移動時間分だけ遅延させる
+        float delay = isTransitioningWithoutFade ? cameraBlendDuration : 0f;
+        gameTimerCoroutine = StartCoroutine(RunGameTimer(delay));
     }
 
     private void EnterResultState()
@@ -471,7 +497,7 @@ public sealed class GameManager : MonoBehaviour
 
         resultCountUpCoroutine = StartCoroutine(RunResultCountUp());
     }
-private void SpawnPenEraser()
+    private void SpawnPenEraser()
     {
         // 既に存在している場合は念のため破棄
         CleanupPenEraser();
@@ -519,8 +545,18 @@ private void SpawnPenEraser()
     }
     // --- ここまで追加 ---
 
-    private IEnumerator RunGameTimer()
+    private IEnumerator RunGameTimer(float delay)
     {
+        // 追加: 指定された時間待機する（カメラ移動を待つ）
+        if (delay > 0f)
+        {
+            yield return new WaitForSeconds(delay);
+        }
+
+        // 追加: カメラ移動完了後にペンを生成し、ゲーム開始のSEを鳴らす
+        SpawnPenEraser();
+        PlaySe(gameStartSe);
+
         while (CurrentState == GameState.InGame && RemainingTimeSeconds > 0f)
         {
             RemainingTimeSeconds = Mathf.Max(0f, RemainingTimeSeconds - Time.unscaledDeltaTime);
@@ -554,14 +590,14 @@ private void SpawnPenEraser()
     {
         float elapsedSeconds = 0f;
         int lastDisplayedValue = -1;
-        float seInterval = 0.05f; 
-        float timeSinceLastSe = seInterval; 
+        float seInterval = 0.05f;
+        float timeSinceLastSe = seInterval;
 
         while (elapsedSeconds < ResultCountUpDurationSeconds)
         {
             float deltaTime = Time.unscaledDeltaTime;
             elapsedSeconds += deltaTime;
-            timeSinceLastSe += deltaTime; 
+            timeSinceLastSe += deltaTime;
 
             float normalizedTime = Mathf.Clamp01(elapsedSeconds / ResultCountUpDurationSeconds);
             float currentPercentage = Mathf.Lerp(0f, resultTargetPercentage, normalizedTime);
@@ -579,7 +615,7 @@ private void SpawnPenEraser()
                 if (timeSinceLastSe >= seInterval)
                 {
                     PlaySe(resultCountSe);
-                    timeSinceLastSe = 0f; 
+                    timeSinceLastSe = 0f;
                 }
             }
 
@@ -713,9 +749,9 @@ private void SpawnPenEraser()
         if (titleUI != null)
         {
             titleUI.StartRequested += RequestStartGame;
-            titleUI.NormalRequested += RequestStartNormal;         
-            titleUI.HardRequested += RequestStartHard;             
-            titleUI.ImpossibleRequested += RequestStartImpossible; 
+            titleUI.NormalRequested += RequestStartNormal;
+            titleUI.HardRequested += RequestStartHard;
+            titleUI.ImpossibleRequested += RequestStartImpossible;
         }
 
         if (tutorialUI != null)
@@ -738,9 +774,9 @@ private void SpawnPenEraser()
         if (titleUI != null)
         {
             titleUI.StartRequested -= RequestStartGame;
-            titleUI.NormalRequested -= RequestStartNormal;         
-            titleUI.HardRequested -= RequestStartHard;             
-            titleUI.ImpossibleRequested -= RequestStartImpossible; 
+            titleUI.NormalRequested -= RequestStartNormal;
+            titleUI.HardRequested -= RequestStartHard;
+            titleUI.ImpossibleRequested -= RequestStartImpossible;
         }
 
         if (tutorialUI != null)
