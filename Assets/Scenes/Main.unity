@@ -5772,6 +5772,7 @@ GameObject:
   - component: {fileID: 2056420705}
   - component: {fileID: 2056420704}
   - component: {fileID: 2056420707}
+  - component: {fileID: 2056420708}
   m_Layer: 13
   m_Name: Pen_Eraser
   m_TagString: Untagged
@@ -5859,6 +5860,28 @@ MonoBehaviour:
   childRigidbodies:
   - {fileID: 923689568}
   - {fileID: 217924859}
+--- !u!114 &2056420708
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2056420703}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f3b4b16bb310440cca4bbcc47c68714d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CollisionSoundPlayer
+  targetLayerMask:
+    serializedVersion: 2
+    m_Bits: 16384
+  seClips:
+  - {fileID: 8300000, guid: 2c6f0d0cb9e364a83977d613bad9e3f4, type: 3}
+  - {fileID: 8300000, guid: 29a09a029ab5645129b0c5b1889e4192, type: 3}
+  volumeScale: 1
+  playOnTrigger: 1
+  playOnCollision: 1
+  cooldownSeconds: 0
 --- !u!4 &2057505107 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 6759924429755792560, guid: 87df5a2a05c17aa46a1e4187d07cef3e, type: 3}
