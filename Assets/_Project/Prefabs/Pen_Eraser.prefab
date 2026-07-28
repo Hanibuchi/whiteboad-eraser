@@ -117,8 +117,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 0.05, y: 0.12, z: 0.02}
-  m_Center: {x: 0, y: -0.04, z: 0.01}
+  m_Size: {x: 0.05, y: 0.1, z: 0.02}
+  m_Center: {x: 0, y: -0.05, z: 0.01}
 --- !u!114 &8756523581131564011
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -295,7 +295,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PenTool
   whiteboard: {fileID: 0}
   tipCollider: {fileID: 5524692628583063742}
-  inkConsumptionPerUvDistance: 0.001
+  inkConsumptionPerUvDistance: 0.002
   minimumBrushRadius: 0.01
   brushSpacingFactor: 0.5
   maxOpacity: 1

@@ -127,7 +127,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PenTool
   whiteboard: {fileID: 0}
   tipCollider: {fileID: 2265898375739460206}
-  inkConsumptionPerUvDistance: 0.001
+  inkConsumptionPerUvDistance: 0.05
   minimumBrushRadius: 0.01
   brushSpacingFactor: 0.5
   maxOpacity: 1
