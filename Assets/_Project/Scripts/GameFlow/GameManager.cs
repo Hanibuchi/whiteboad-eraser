@@ -10,7 +10,7 @@ public sealed class GameManager : MonoBehaviour
     public const string HasPlayedOncePrefsKey = "GameManager.HasPlayedOnce";
 
     [SerializeField] private float defaultTimeLimitSeconds = 180f;
-    private const float ClearPercentageThreshold = 99.9f;
+    [SerializeField] private float clearPercentageThreshold = 99.0f;
     private const float ResultCountUpDurationSeconds = 2f;
 
     private static readonly string[] TutorialLines =
@@ -85,6 +85,10 @@ public sealed class GameManager : MonoBehaviour
 
     private void Update()
     {
+        if (stateTransitionCoroutine != null)
+        {
+            return;
+        }
         if (CurrentState == GameState.InGame)
         {
             RefreshWhitePercentage();
@@ -208,6 +212,32 @@ public sealed class GameManager : MonoBehaviour
         }
 
         SetWhitePercentage(whiteboard.GetWhitePercentage());
+
+        // 追加: 99%を超えたらその時点でクリアとしてリザルトへ遷移する
+        if (CurrentState == GameState.InGame && WhitePercentage >= clearPercentageThreshold)
+        {
+            NotifyGameClear();
+        }
+    }
+
+    private void NotifyGameClear()
+    {
+        if (CurrentState != GameState.InGame)
+        {
+            return;
+        }
+
+        // タイマーを止める
+        if (gameTimerCoroutine != null)
+        {
+            StopCoroutine(gameTimerCoroutine);
+            gameTimerCoroutine = null;
+        }
+
+        // タイムアップSEの代わりに、クリア用のSEを鳴らす場合はここに処理を追加できます
+        // PlaySe(gameClearSe);
+
+        StartResultFlow();
     }
 
     public void NotifyTimeExpired()
@@ -409,7 +439,7 @@ public sealed class GameManager : MonoBehaviour
     {
         PlayBgm(resultBgm);
         resultTargetPercentage = WhitePercentage;
-        lastRunCleared = resultTargetPercentage >= ClearPercentageThreshold;
+        lastRunCleared = resultTargetPercentage >= clearPercentageThreshold;
 
         if (resultUI != null)
         {
@@ -456,15 +486,21 @@ public sealed class GameManager : MonoBehaviour
         gameTimerCoroutine = null;
         NotifyTimeExpired();
     }
-
     private IEnumerator RunResultCountUp()
     {
         float elapsedSeconds = 0f;
-        int lastPlayedSecond = -1;
+        int lastDisplayedValue = -1;
+
+        // --- SEを間引くための変数 ---
+        float seInterval = 0.05f; // 0.05秒（50ミリ秒）に1回だけ鳴らす
+        float timeSinceLastSe = seInterval; // 最初はすぐに鳴るように初期値を設定
 
         while (elapsedSeconds < ResultCountUpDurationSeconds)
         {
-            elapsedSeconds += Time.unscaledDeltaTime;
+            float deltaTime = Time.unscaledDeltaTime;
+            elapsedSeconds += deltaTime;
+            timeSinceLastSe += deltaTime; // 経過時間を加算
+
             float normalizedTime = Mathf.Clamp01(elapsedSeconds / ResultCountUpDurationSeconds);
             float currentPercentage = Mathf.Lerp(0f, resultTargetPercentage, normalizedTime);
 
@@ -473,11 +509,17 @@ public sealed class GameManager : MonoBehaviour
                 resultUI.SetCurrentPercentage(currentPercentage);
             }
 
-            int currentWholeSecond = Mathf.FloorToInt(elapsedSeconds);
-            if (currentWholeSecond != lastPlayedSecond && currentWholeSecond < ResultCountUpDurationSeconds)
+            int currentDisplayedValue = Mathf.FloorToInt(currentPercentage * 10f);
+            if (currentDisplayedValue != lastDisplayedValue && elapsedSeconds < ResultCountUpDurationSeconds)
             {
-                lastPlayedSecond = currentWholeSecond;
-                PlaySe(resultCountSe);
+                lastDisplayedValue = currentDisplayedValue;
+
+                // 前回SEを鳴らしてから指定した時間(seInterval)以上経過しているかチェック
+                if (timeSinceLastSe >= seInterval)
+                {
+                    PlaySe(resultCountSe);
+                    timeSinceLastSe = 0f; // タイマーをリセット
+                }
             }
 
             yield return null;
@@ -491,6 +533,10 @@ public sealed class GameManager : MonoBehaviour
         if (lastRunCleared)
         {
             MarkClear(CurrentDifficulty);
+            if (resultUI != null)
+            {
+                resultUI.PlayClearParticle();
+            }
         }
 
         PlaySe(resultFinalSe);

@@ -49,15 +49,16 @@ public sealed class SettingsWindowController : MonoBehaviour
     {
         SetWindowVisible(false);
     }
-
-    public void Toggle()
+public void Toggle()
     {
         if (windowRoot == null)
         {
             return;
         }
 
-        SetWindowVisible(!windowRoot.activeSelf);
+        // CanvasGroupが存在する場合はalpha値で表示状態を判定し、なければactiveSelfで判定する
+        bool isVisible = windowCanvasGroup != null ? windowCanvasGroup.alpha > 0f : windowRoot.activeSelf;
+        SetWindowVisible(!isVisible);
     }
 
     private void RegisterListeners()
@@ -114,6 +115,12 @@ public sealed class SettingsWindowController : MonoBehaviour
         if (openButton != null)
         {
             openButton.gameObject.SetActive(!visible);
+        }
+
+        // 表示命令が来た際、オブジェクト自体が非アクティブなら強制的にアクティブにする
+        if (visible && windowRoot != null && !windowRoot.activeSelf)
+        {
+            windowRoot.SetActive(true);
         }
 
         if (windowCanvasGroup != null)
