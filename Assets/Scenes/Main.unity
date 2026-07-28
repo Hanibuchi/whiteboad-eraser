@@ -3315,7 +3315,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 0}
+  m_Color: {r: 1, g: 1, b: 1, a: 0.5019608}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -4319,7 +4319,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Whiteboard
   targetRenderer: {fileID: 963969985}
   boardCollider: {fileID: 963969984}
-  initialTexture: {fileID: 2800000, guid: c30f222b1160e4749b91eed2e39648e4, type: 3}
+  initialTexture: {fileID: 2800000, guid: 6cc43ad75d1a24be58641573b2f44db4, type: 3}
   referenceTextureWidth: 1024
   referenceTextureHeight: 1024
   matchQuadAspect: 1
@@ -5870,8 +5870,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4a05f16034f4a42e2bae9fc91b6e8140, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GameManager
-  defaultTimeLimitSeconds: 180
-  clearPercentageThreshold: 99
+  defaultTimeLimitSeconds: 120
+  clearPercentageThreshold: 97
+  cameraBlendDuration: 2
   fadeManager: {fileID: 334463557}
   whiteboard: {fileID: 963969983}
   titleUI: {fileID: 156632870}

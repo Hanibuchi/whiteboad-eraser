@@ -125,6 +125,28 @@ public sealed class Whiteboard : MonoBehaviour
 
         QueueWhitePercentageRefresh();
     }
+    public void ClearBoard()
+    {
+        if (!CanDraw())
+        {
+            return;
+        }
+
+        Texture sourceTexture = initialTexture != null ? initialTexture : Texture2D.whiteTexture;
+
+        Graphics.Blit(sourceTexture, frontTexture, drawMaterial, 2);
+        Graphics.Blit(sourceTexture, backTexture, drawMaterial, 2);
+
+        ApplyTextureToRenderer(frontTexture);
+
+        // 追加: 非同期読み込みのフラグをリセット
+        whitePercentageDirty = true;
+        whitePercentageReadbackPending = false;
+
+        // 変更: 非同期処理を待つと「前回のクリア時の白さ」が数フレーム残ってしまうため、
+        // リセット時のみ強制的に同期処理でピクセルを読み込み、即座に正しい割合をキャッシュさせる
+        RefreshWhitePercentageImmediately();
+    }
 
     public void DrawCircle(Vector2 uvPosition, float radius, float opacity)
     {

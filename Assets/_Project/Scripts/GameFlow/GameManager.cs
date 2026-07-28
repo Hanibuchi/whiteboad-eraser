@@ -17,17 +17,7 @@ public sealed class GameManager : MonoBehaviour
     [SerializeField] private float cameraBlendDuration = 2f;
     private bool isTransitioningWithoutFade = false;
 
-    private static readonly string[] TutorialLines =
-    {
-        "ホワイトボード消しにペンを固定すれば、描画と消去を同時に行えるのではないか？",
-        "始まりは、ちょっとした思いつきだった。",
-        "固定するのに瞬間接着剤を使ったら、取れなくなった。",
-        "予備のホワイトボード消しはない。",
-        "そして、最悪のタイミングで急用の連絡が入った。",
-        "『今すぐホワイトボードを使って説明してくれ』",
-        "制限時間内にホワイトボードを消そう。",
-        "クリア条件：99%以上白くする",
-    };
+    private string[] tutorialLines;
 
     [Header("Core References")]
     [SerializeField] private FadeManager fadeManager;
@@ -87,6 +77,18 @@ public sealed class GameManager : MonoBehaviour
 
     private void Awake()
     {
+        tutorialLines = new string[]
+                {
+            "ホワイトボード消しにペンを固定すれば、描画と消去を同時に行えるのではないか？",
+            "始まりは、ちょっとした思いつきだった。",
+            "固定するのに瞬間接着剤を使ったら、取れなくなった。",
+            "予備のホワイトボード消しはない。",
+            "そして、最悪のタイミングで急用の連絡が入った。",
+            "『今すぐホワイトボードを使って説明してくれ』",
+            "制限時間内にホワイトボードを消そう。",
+            $"クリア条件：{clearPercentageThreshold}%以上白くする" // ← ここで変数を埋め込む
+                };
+
         LoadProgress();
         ApplyInitialState();
     }
@@ -149,13 +151,13 @@ public sealed class GameManager : MonoBehaviour
             return;
         }
 
-        if (TutorialLines.Length == 0)
+        if (tutorialLines.Length == 0)
         {
             tutorialUI?.InvokeFinished();
             return;
         }
 
-        if (tutorialStepIndex >= TutorialLines.Length - 1)
+        if (tutorialStepIndex >= tutorialLines.Length - 1)
         {
             tutorialUI?.InvokeFinished();
             return;
@@ -442,17 +444,16 @@ public sealed class GameManager : MonoBehaviour
             tutorialUI.Show();
             tutorialUI.ResetStory();
 
-            if (TutorialLines.Length > 0)
+            if (tutorialLines.Length > 0)
             {
-                tutorialUI.SetDialogue(TutorialLines[0]);
-                tutorialUI.SetStep(1, TutorialLines.Length);
+                tutorialUI.SetDialogue(tutorialLines[0]);
+                tutorialUI.SetStep(1, tutorialLines.Length);
             }
         }
     }
     private void EnterInGameState()
     {
         PlayBgm(inGameBgm);
-        // PlaySe(gameStartSe); // ← 削除します
 
         mainCinemachineCamera.SetActive(true);
 
@@ -462,7 +463,10 @@ public sealed class GameManager : MonoBehaviour
             SaveProgress();
         }
 
-        // SpawnPenEraser(); // ← 削除します（待機後に生成するため）
+        if (whiteboard != null)
+        {
+            whiteboard.ClearBoard();
+        }
 
         RemainingTimeSeconds = TimeLimitSeconds;
         lastCountdownSecondPlayed = int.MaxValue;
@@ -679,14 +683,14 @@ public sealed class GameManager : MonoBehaviour
 
     private void UpdateTutorialLine()
     {
-        if (tutorialUI == null || TutorialLines.Length == 0)
+        if (tutorialUI == null || tutorialLines.Length == 0)
         {
             return;
         }
 
-        int clampedIndex = Mathf.Clamp(tutorialStepIndex, 0, TutorialLines.Length - 1);
-        tutorialUI.SetDialogue(TutorialLines[clampedIndex]);
-        tutorialUI.SetStep(clampedIndex + 1, TutorialLines.Length);
+        int clampedIndex = Mathf.Clamp(tutorialStepIndex, 0, tutorialLines.Length - 1);
+        tutorialUI.SetDialogue(tutorialLines[clampedIndex]);
+        tutorialUI.SetStep(clampedIndex + 1, tutorialLines.Length);
     }
 
     private void RefreshResultUnlockButtons(bool cleared)
