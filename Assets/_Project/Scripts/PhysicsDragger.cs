@@ -131,18 +131,12 @@ public class PhysicsDragger : MonoBehaviour
 
         _isDragging = true;
     }
-
-    private static bool TryGetPointerPosition(out Vector2 pointerPosition)
+private static bool TryGetPointerPosition(out Vector2 pointerPosition)
     {
-        if (Mouse.current != null)
+        // Pointer.currentを使えば、マウス・タッチ問わず現在のポインター位置を取得できます
+        if (Pointer.current != null)
         {
-            pointerPosition = Mouse.current.position.ReadValue();
-            return true;
-        }
-
-        if (Touchscreen.current != null && Touchscreen.current.primaryTouch.press.isPressed)
-        {
-            pointerPosition = Touchscreen.current.primaryTouch.position.ReadValue();
+            pointerPosition = Pointer.current.position.ReadValue();
             return true;
         }
 
@@ -152,15 +146,10 @@ public class PhysicsDragger : MonoBehaviour
 
     private static bool TryGetPointerDown(out Vector2 pointerPosition)
     {
-        if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame)
+        // press.wasPressedThisFrame でクリック/タップの瞬間を判定
+        if (Pointer.current != null && Pointer.current.press.wasPressedThisFrame)
         {
-            pointerPosition = Mouse.current.position.ReadValue();
-            return true;
-        }
-
-        if (Touchscreen.current != null && Touchscreen.current.primaryTouch.press.wasPressedThisFrame)
-        {
-            pointerPosition = Touchscreen.current.primaryTouch.position.ReadValue();
+            pointerPosition = Pointer.current.position.ReadValue();
             return true;
         }
 
@@ -170,12 +159,8 @@ public class PhysicsDragger : MonoBehaviour
 
     private static bool TryGetPointerUp()
     {
-        if (Mouse.current != null && Mouse.current.leftButton.wasReleasedThisFrame)
-        {
-            return true;
-        }
-
-        if (Touchscreen.current != null && Touchscreen.current.primaryTouch.press.wasReleasedThisFrame)
+        // press.wasReleasedThisFrame で離した瞬間を判定
+        if (Pointer.current != null && Pointer.current.press.wasReleasedThisFrame)
         {
             return true;
         }
