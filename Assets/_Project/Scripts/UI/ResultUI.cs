@@ -55,6 +55,7 @@ public sealed class ResultUI : MonoBehaviour
         SetTargetPercentage(0f);
         SetHardButtonVisible(false);
         SetImpossibleButtonVisible(false);
+        SetRetryButtonVisible(true);
         SetCleared(false);
 
         if (clearParticle != null)
@@ -80,6 +81,14 @@ public sealed class ResultUI : MonoBehaviour
         }
     }
 
+    public void SetRetryButtonVisible(bool visible)
+    {
+        if (retryButton != null)
+        {
+            retryButton.gameObject.SetActive(visible);
+        }
+    }
+
     public void SetHardButtonVisible(bool visible)
     {
         if (hardButton != null)
@@ -96,12 +105,22 @@ public sealed class ResultUI : MonoBehaviour
         }
     }
 
-    public void SetCleared(bool cleared)
+    public void SetCleared(bool cleared, float clearTime = 0f, float clearConditionPercentage = 0f)
     {
         // クリア状況に応じてメッセージを出し分ける
         if (resultMessageText != null)
         {
-            resultMessageText.text = cleared ? "クリア！" : "残念...!";
+            if (cleared)
+            {
+                // タイムの表示形式。小数点第1位まで表示なら F1、第2位なら F2 に変更してください。
+                // 整数のみ（例：10秒）にしたい場合は {clearTime:0} とします。
+                resultMessageText.text = $"クリア！ タイム: {clearTime:F2}秒";
+            }
+            else
+            {
+                // 「97%以上」のように表示
+                resultMessageText.text = $"残念...! クリア条件: {clearConditionPercentage:0}%以上";
+            }
         }
 
         if (resultAnimator != null)

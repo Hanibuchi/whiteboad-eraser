@@ -8,6 +8,7 @@ public sealed class InGameUI : MonoBehaviour
     [SerializeField] private GameObject root;
     [SerializeField] private TextMeshProUGUI remainingTimeText;
     [SerializeField] private TextMeshProUGUI whitePercentageText;
+    [SerializeField] private TextMeshProUGUI clearConditionText;
     [SerializeField] private GameObject countdownWarningRoot;
 
     private Coroutine countdownCoroutine; // アニメーション用のコルーチン参照
@@ -39,6 +40,15 @@ public sealed class InGameUI : MonoBehaviour
         if (whitePercentageText != null)
         {
             whitePercentageText.text = $"{Mathf.Clamp(whitePercentage, 0f, 100f):0.0}%";
+        }
+    }
+
+    public void SetClearCondition(float percentage)
+    {
+        if (clearConditionText != null)
+        {
+            // 「97%でクリア」のように表示（小数点以下を切り捨てる場合は 0 を指定）
+            clearConditionText.text = $"{percentage:0}%でクリア";
         }
     }
 

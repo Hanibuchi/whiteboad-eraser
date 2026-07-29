@@ -493,6 +493,7 @@ public sealed class GameManager : MonoBehaviour
         {
             whiteboard.ClearBoard();
         }
+        TimeLimitSeconds = defaultTimeLimitSeconds;
 
         RemainingTimeSeconds = TimeLimitSeconds;
         lastCountdownSecondPlayed = int.MaxValue;
@@ -505,6 +506,7 @@ public sealed class GameManager : MonoBehaviour
             inGameUI.SetCountdownWarningVisible(false);
             inGameUI.SetRemainingTime(RemainingTimeSeconds);
             inGameUI.SetWhitePercentage(WhitePercentage);
+            inGameUI.SetClearCondition(clearPercentageThreshold);
         }
 
         float delay = isTransitioningWithoutFade ? cameraBlendDuration : 0f;
@@ -523,7 +525,8 @@ public sealed class GameManager : MonoBehaviour
             resultUI.ResetDisplay();
             resultUI.SetTargetPercentage(resultTargetPercentage);
             resultUI.SetCurrentPercentage(0f);
-            resultUI.SetCleared(lastRunCleared);
+            float clearTime = TimeLimitSeconds - RemainingTimeSeconds;
+            resultUI.SetCleared(lastRunCleared, clearTime, clearPercentageThreshold);
             resultUI.SetHardButtonVisible(false);
             resultUI.SetImpossibleButtonVisible(false);
         }
@@ -722,9 +725,16 @@ public sealed class GameManager : MonoBehaviour
         {
             return;
         }
+        
+        bool showHard = cleared && CurrentDifficulty == DifficultyMode.Normal && IsHardUnlocked;
+        bool showImpossible = cleared && CurrentDifficulty == DifficultyMode.Hard && IsImpossibleUnlocked;
 
-        resultUI.SetHardButtonVisible(cleared && CurrentDifficulty == DifficultyMode.Normal && IsHardUnlocked);
-        resultUI.SetImpossibleButtonVisible(cleared && CurrentDifficulty == DifficultyMode.Hard && IsImpossibleUnlocked);
+        // ▼ 追加：上位ステージのボタンが出ない場合（失敗時や、最上位のImpossibleクリア時）にリトライボタンを表示する
+        bool showRetry = !showHard && !showImpossible;
+
+        resultUI.SetHardButtonVisible(showHard);
+        resultUI.SetImpossibleButtonVisible(showImpossible);
+        resultUI.SetRetryButtonVisible(showRetry);
     }
 
     private void PlayBgm(AudioClip clip)
