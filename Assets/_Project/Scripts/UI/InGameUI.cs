@@ -1,7 +1,8 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
-using System.Collections; // コルーチン用に必要
+using System.Collections;
+using System;
 
 public sealed class InGameUI : MonoBehaviour
 {
@@ -11,7 +12,40 @@ public sealed class InGameUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI clearConditionText;
     [SerializeField] private GameObject countdownWarningRoot;
 
+    [Header("Buttons")]
+    [SerializeField] private Button retryButton;
+    [SerializeField] private Button titleButton;
+
+    public event Action RetryRequested;
+    public event Action TitleRequested;
+
     private Coroutine countdownCoroutine; // アニメーション用のコルーチン参照
+
+    private void Awake()
+    {
+        if (retryButton != null)
+        {
+            retryButton.onClick.AddListener(() => RetryRequested?.Invoke());
+        }
+
+        if (titleButton != null)
+        {
+            titleButton.onClick.AddListener(() => TitleRequested?.Invoke());
+        }
+    }
+
+    private void OnDestroy()
+    {
+        if (retryButton != null)
+        {
+            retryButton.onClick.RemoveAllListeners();
+        }
+
+        if (titleButton != null)
+        {
+            titleButton.onClick.RemoveAllListeners();
+        }
+    }
 
     public void Show()
     {

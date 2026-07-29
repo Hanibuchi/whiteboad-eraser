@@ -54,7 +54,8 @@ public sealed class GameManager : MonoBehaviour
     [SerializeField] private AudioClip countdownSe;
     [SerializeField] private AudioClip timeUpSe;
     [SerializeField] private AudioClip resultCountSe;
-    [SerializeField] private AudioClip resultFinalSe;
+    [SerializeField] private AudioClip resultClearSe;
+    [SerializeField] private AudioClip resultFailedSe;
 
     public GameState CurrentState { get; private set; } = GameState.Title;
     public DifficultyMode CurrentDifficulty { get; private set; } = DifficultyMode.Normal;
@@ -667,9 +668,13 @@ public sealed class GameManager : MonoBehaviour
             {
                 resultUI.PlayClearParticle();
             }
+            PlaySe(resultClearSe);
+        }
+        else
+        {
+            PlaySe(resultFailedSe);
         }
 
-        PlaySe(resultFinalSe);
         RefreshResultUnlockButtons(lastRunCleared);
         resultCountUpCoroutine = null;
     }
@@ -800,6 +805,12 @@ public sealed class GameManager : MonoBehaviour
             tutorialUI.Finished += RequestFinishTutorial;
         }
 
+        if (inGameUI != null)
+        {
+            inGameUI.RetryRequested += RequestRetry;
+            inGameUI.TitleRequested += RequestReturnToTitle;
+        }
+
         if (resultUI != null)
         {
             resultUI.RetryRequested += RequestRetry;
@@ -823,6 +834,12 @@ public sealed class GameManager : MonoBehaviour
         {
             tutorialUI.AdvanceRequested -= RequestAdvanceTutorial;
             tutorialUI.Finished -= RequestFinishTutorial;
+        }
+
+        if (inGameUI != null)
+        {
+            inGameUI.RetryRequested -= RequestRetry;
+            inGameUI.TitleRequested -= RequestReturnToTitle;
         }
 
         if (resultUI != null)
