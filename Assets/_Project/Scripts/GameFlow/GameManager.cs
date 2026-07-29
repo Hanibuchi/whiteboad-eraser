@@ -445,7 +445,7 @@ public sealed class GameManager : MonoBehaviour
 
     private void EnterTitleState()
     {
-        CleanupPenEraser(); 
+        CleanupPenEraser();
 
         PlayBgm(titleBgm);
 
@@ -498,7 +498,7 @@ public sealed class GameManager : MonoBehaviour
 
         RemainingTimeSeconds = TimeLimitSeconds;
         lastCountdownSecondPlayed = int.MaxValue;
-        SetWhitePercentage(0f); 
+        SetWhitePercentage(0f);
         isGamePlaying = false; // 確実に追加
 
         if (inGameUI != null)
@@ -534,7 +534,7 @@ public sealed class GameManager : MonoBehaviour
 
         resultCountUpCoroutine = StartCoroutine(RunResultCountUp());
     }
-    
+
     private void SpawnPenEraser()
     {
         CleanupPenEraser();
@@ -663,7 +663,7 @@ public sealed class GameManager : MonoBehaviour
         {
             MarkClear(CurrentDifficulty);
             SendClearTimeScore(); // ← 追加: クリア時にスコアを送信
-            
+
             if (resultUI != null)
             {
                 resultUI.PlayClearParticle();
@@ -730,7 +730,7 @@ public sealed class GameManager : MonoBehaviour
         {
             return;
         }
-        
+
         bool showHard = cleared && CurrentDifficulty == DifficultyMode.Normal && IsHardUnlocked;
         bool showImpossible = cleared && CurrentDifficulty == DifficultyMode.Hard && IsImpossibleUnlocked;
 
@@ -781,10 +781,41 @@ public sealed class GameManager : MonoBehaviour
 
     public void RequestTweet()
     {
-        string tweetText = $"ホワイトボードを {WhitePercentage:0.0}% まで消しました！\n#ホワイトボードを消すゲーム\nhttps://unityroom.com/games/whiteboard-eraser";
+        // 難易度の名前を日本語に変換（お好みで調整してください）
+        string modeName = CurrentDifficulty switch
+        {
+            DifficultyMode.Normal => "ノーマル",
+            DifficultyMode.Hard => "ハード",
+            DifficultyMode.Impossible => "インポッシブル",
+            _ => "ノーマル"
+        };
+
+        string tweetText;
+        string gameName = "ホワイトボードを消すゲーム";
+        string gameUrl = "https://unityroom.com/games/whiteboard-eraser";
+
+        if (lastRunCleared)
+        {
+            // クリア時：モードとクリア時間を表示
+            float clearTime = TimeLimitSeconds - RemainingTimeSeconds;
+            tweetText = $"【{modeName}モード】\nホワイトボードを {WhitePercentage:0.0}% 消した！\nクリアタイム {clearTime:F2}秒\n#{gameName}\n{gameUrl}";
+        }
+        else
+        {
+            // 失敗時：モードと達成率を表示
+            tweetText = $"【{modeName}モード】\nホワイトボードを {WhitePercentage:0.0}% 消した！\n#{gameName}\n{gameUrl}";
+        }
+
         string tweetUrl = "https://twitter.com/intent/tweet?text=" + Uri.EscapeDataString(tweetText);
         Application.OpenURL(tweetUrl);
     }
+
+    // public void RequestTweet()
+    // {
+    //     string tweetText = $"ホワイトボードを {WhitePercentage:0.0}% まで消しました！\n#ホワイトボードを消すゲーム\nhttps://unityroom.com/games/whiteboard-eraser";
+    //     string tweetUrl = "https://twitter.com/intent/tweet?text=" + Uri.EscapeDataString(tweetText);
+    //     Application.OpenURL(tweetUrl);
+    // }
     private void RequestStartNormal() => RequestStartDifficulty(DifficultyMode.Normal);
     private void RequestStartHard() => RequestStartDifficulty(DifficultyMode.Hard);
     private void RequestStartImpossible() => RequestStartDifficulty(DifficultyMode.Impossible);
