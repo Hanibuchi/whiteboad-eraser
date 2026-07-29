@@ -177,8 +177,20 @@ PrefabInstance:
       value: "\u30DC\u30BF\u30F3"
       objectReference: {fileID: 0}
     - target: {fileID: 8024461916723777978, guid: b5192883eede54ceea589feaccf1c607, type: 3}
+      propertyPath: m_fontAsset
+      value: 
+      objectReference: {fileID: 11400000, guid: 5b587f22ba0e44d5daee86077a241353, type: 2}
+    - target: {fileID: 8024461916723777978, guid: b5192883eede54ceea589feaccf1c607, type: 3}
+      propertyPath: m_sharedMaterial
+      value: 
+      objectReference: {fileID: 786070043891000467, guid: 5b587f22ba0e44d5daee86077a241353, type: 2}
+    - target: {fileID: 8024461916723777978, guid: b5192883eede54ceea589feaccf1c607, type: 3}
       propertyPath: m_HorizontalAlignment
       value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 8024461916723777978, guid: b5192883eede54ceea589feaccf1c607, type: 3}
+      propertyPath: m_hasFontAssetChanged
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8235830782556932361, guid: b5192883eede54ceea589feaccf1c607, type: 3}
       propertyPath: m_Pivot.x
