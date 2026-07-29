@@ -47,6 +47,7 @@ GameObject:
   - component: {fileID: 8756523581131564011}
   - component: {fileID: 1619675880542547630}
   - component: {fileID: 9021061292093939227}
+  - component: {fileID: 8228569723121790106}
   m_Layer: 13
   m_Name: Pen_Eraser
   m_TagString: Untagged
@@ -168,6 +169,25 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 43112392b8b7e4025861492ed613fe84, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ToolCollisionRelay
+--- !u!114 &8228569723121790106
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1755476526883989346}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bd86e29a2cf0a49be8cf35fe76df2229, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SpeedSeController
+  speedThreshold: 4
+  playInterval: 0.5
+  speedSeClips:
+  - {fileID: 8300000, guid: 5be4f0890d1d444338b3d2c932e91ad9, type: 3}
+  - {fileID: 8300000, guid: 2308c4c67874644a197e12009508351c, type: 3}
+  - {fileID: 8300000, guid: bf8625de45e4748fab036ca651cdca1f, type: 3}
+  - {fileID: 8300000, guid: 5f88be99a3bbb4ebcacf8891a2ad0794, type: 3}
 --- !u!1 &2896721758493724237
 GameObject:
   m_ObjectHideFlags: 0
@@ -428,6 +448,7 @@ MonoBehaviour:
   whiteboard: {fileID: 0}
   bottomCollider: {fileID: 3542224908656311882}
   minimumEraseSize: 0.01
+  eraseSpacingFactor: 0.5
   autoFindWhiteboard: 1
 --- !u!1 &7266652306455827592
 GameObject:

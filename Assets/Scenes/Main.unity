@@ -4113,7 +4113,7 @@ MonoBehaviour:
     m_Bits: 8192
   maxRayDistance: 100
   spring: 4000
-  damper: 100
+  damper: 0
   massScale: 1
   grabbedAngularDrag: 4
   grabbedDrag: 4
