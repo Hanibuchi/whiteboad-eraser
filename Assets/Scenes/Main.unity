@@ -4381,6 +4381,7 @@ MonoBehaviour:
   targetRenderer: {fileID: 963969985}
   boardCollider: {fileID: 963969984}
   initialTexture: {fileID: 2800000, guid: 6cc43ad75d1a24be58641573b2f44db4, type: 3}
+  drawShader: {fileID: 4800000, guid: 5d977d67f51224ae096acfaf45284ce5, type: 3}
   referenceTextureWidth: 1024
   referenceTextureHeight: 1024
   matchQuadAspect: 1

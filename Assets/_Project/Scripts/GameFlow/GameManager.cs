@@ -81,6 +81,7 @@ public sealed class GameManager : MonoBehaviour
     private int lastCountdownSecondPlayed = int.MaxValue;
     private bool lastRunCleared;
     private float resultTargetPercentage;
+    private bool isGamePlaying = false;
 
     private void Awake()
     {
@@ -117,7 +118,7 @@ public sealed class GameManager : MonoBehaviour
         {
             return;
         }
-        if (CurrentState == GameState.InGame)
+        if (CurrentState == GameState.InGame && isGamePlaying)
         {
             RefreshWhitePercentage();
         }
@@ -255,6 +256,7 @@ public sealed class GameManager : MonoBehaviour
         {
             return;
         }
+        isGamePlaying = false;
 
         if (gameTimerCoroutine != null)
         {
@@ -271,6 +273,7 @@ public sealed class GameManager : MonoBehaviour
         {
             return;
         }
+        isGamePlaying = false;
 
         if (gameTimerCoroutine != null)
         {
@@ -493,7 +496,8 @@ public sealed class GameManager : MonoBehaviour
 
         RemainingTimeSeconds = TimeLimitSeconds;
         lastCountdownSecondPlayed = int.MaxValue;
-        SetWhitePercentage(whiteboard != null ? whiteboard.GetWhitePercentage() : 0f);
+        SetWhitePercentage(0f); 
+        isGamePlaying = false; // 確実に追加
 
         if (inGameUI != null)
         {
@@ -578,6 +582,8 @@ public sealed class GameManager : MonoBehaviour
 
         SpawnPenEraser();
         PlaySe(gameStartSe);
+
+        isGamePlaying = true;
 
         while (CurrentState == GameState.InGame && RemainingTimeSeconds > 0f)
         {

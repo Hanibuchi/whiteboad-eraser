@@ -16,6 +16,7 @@ public sealed class Whiteboard : MonoBehaviour
     [SerializeField] private Renderer targetRenderer;
     [SerializeField] private MeshCollider boardCollider;
     [SerializeField] private Texture2D initialTexture;
+    [SerializeField] private Shader drawShader;
     [SerializeField, Min(32)] private int referenceTextureWidth = 1024;
     [SerializeField, Min(32)] private int referenceTextureHeight = 1024;
     [SerializeField] private bool matchQuadAspect = true;
@@ -97,14 +98,13 @@ public sealed class Whiteboard : MonoBehaviour
 
         if (drawMaterial == null)
         {
-            Shader shader = Shader.Find(DrawShaderName);
-            if (shader == null)
+            if (drawShader == null)
             {
-                Debug.LogError($"{DrawShaderName} が見つかりません。", this);
+                Debug.LogError("DrawShaderがInspectorに設定されていません。", this);
                 return;
             }
 
-            drawMaterial = new Material(shader)
+            drawMaterial = new Material(drawShader)
             {
                 hideFlags = HideFlags.HideAndDontSave
             };
